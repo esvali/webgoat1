@@ -1,6 +1,7 @@
 package org.owasp.webgoat.lessons;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -95,14 +96,13 @@ public class BackDoors extends LessonAdapter
 	    String userInput = s.getParser().getRawParameter(USERNAME, "");
 	    if (!userInput.equals(""))
 	    {
-		userInput = SELECT_ST + userInput;
 		String[] arrSQL = userInput.split(";");
 		Connection conn = getConnection(s);
-		Statement statement = conn.createStatement(
-			ResultSet.TYPE_SCROLL_INSENSITIVE,
-			ResultSet.CONCUR_READ_ONLY);
 		if (arrSQL.length == 2)
 		{
+		    Statement statement = conn.createStatement(
+			    ResultSet.TYPE_SCROLL_INSENSITIVE,
+			    ResultSet.CONCUR_READ_ONLY);
 		    statement.executeUpdate(arrSQL[1]);
 
 		    getLessonTracker(s).setStage(2);
@@ -110,7 +110,12 @@ public class BackDoors extends LessonAdapter
 			    .setMessage("You have succeeded in exploiting the vulnerable query and created another SQL statement. Now move to stage 2 to learn how to create a backdoor or a DB worm");
 		}
 
-		ResultSet rs = statement.executeQuery(arrSQL[0]);
+		PreparedStatement preparedStatement = conn.prepareStatement(
+			SELECT_ST + "?",
+			ResultSet.TYPE_SCROLL_INSENSITIVE,
+			ResultSet.CONCUR_READ_ONLY);
+		preparedStatement.setString(1, arrSQL[0]);
+		ResultSet rs = preparedStatement.executeQuery();
 		if (rs.next())
 		{
 		    Table t = new Table(0).setCellSpacing(0).setCellPadding(0)
